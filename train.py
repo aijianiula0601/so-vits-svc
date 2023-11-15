@@ -2,6 +2,8 @@ import logging
 import multiprocessing
 import os
 import time
+import setproctitle
+
 
 import torch
 import torch.distributed as dist
@@ -33,6 +35,7 @@ start_time = time.time()
 
 
 def main():
+    setproctitle.setproctitle('s-vsvc')
     """Assume Single Node Multi GPUs Training Only"""
     assert torch.cuda.is_available(), "CPU training is not allowed."
     hps = utils.get_hparams()

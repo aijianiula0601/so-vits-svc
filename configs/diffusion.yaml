@@ -9,12 +9,12 @@ data:
   extensions:
   - wav
   sampling_rate: 44100
-  training_files: /mnt/cephfs/hjh/train_record/vc/so-vits-svc/vctk/test_data/train.txt
+  training_files: filelists/train.txt
   unit_interpolate_mode: nearest
-  validation_files: /mnt/cephfs/hjh/train_record/vc/so-vits-svc/vctk/test_data/val.txt
+  validation_files: filelists/val.txt
 device: cuda
 env:
-  expdir: /mnt/cephfs/hjh/train_record/vc/so-vits-svc/vctk/test_data/logs/44k/diffusion
+  expdir: logs/44k/diffusion
   gpu_id: 0
 infer:
   method: dpm-solver++
@@ -24,13 +24,121 @@ model:
   n_chans: 512
   n_hidden: 256
   n_layers: 20
-  n_spk: 2
+  n_spk: 110
   timesteps: 1000
   type: Diffusion
   use_pitch_aug: true
 spk:
-  p303: 1
-  p304: 0
+  p225: 95
+  p226: 22
+  p227: 91
+  p228: 81
+  p229: 10
+  p230: 5
+  p231: 73
+  p232: 34
+  p233: 1
+  p234: 52
+  p236: 35
+  p237: 94
+  p238: 89
+  p239: 37
+  p240: 25
+  p241: 48
+  p243: 54
+  p244: 26
+  p245: 75
+  p246: 49
+  p247: 108
+  p248: 96
+  p249: 87
+  p250: 99
+  p251: 67
+  p252: 66
+  p253: 4
+  p254: 50
+  p255: 55
+  p256: 71
+  p257: 85
+  p258: 78
+  p259: 2
+  p260: 80
+  p261: 63
+  p262: 90
+  p263: 97
+  p264: 44
+  p265: 109
+  p266: 36
+  p267: 64
+  p268: 8
+  p269: 7
+  p270: 62
+  p271: 17
+  p272: 6
+  p273: 84
+  p274: 14
+  p275: 53
+  p276: 38
+  p277: 76
+  p278: 27
+  p279: 41
+  p280: 70
+  p281: 56
+  p282: 40
+  p283: 24
+  p284: 18
+  p285: 86
+  p286: 61
+  p287: 12
+  p288: 21
+  p292: 74
+  p293: 32
+  p294: 77
+  p295: 103
+  p297: 59
+  p298: 46
+  p299: 0
+  p300: 47
+  p301: 102
+  p302: 72
+  p303: 92
+  p304: 51
+  p305: 107
+  p306: 23
+  p307: 106
+  p308: 79
+  p310: 39
+  p311: 30
+  p312: 104
+  p313: 15
+  p314: 105
+  p315: 16
+  p316: 13
+  p317: 45
+  p318: 57
+  p323: 29
+  p326: 28
+  p329: 83
+  p330: 42
+  p333: 31
+  p334: 43
+  p335: 88
+  p336: 82
+  p339: 93
+  p340: 3
+  p341: 19
+  p343: 58
+  p345: 98
+  p347: 33
+  p351: 101
+  p360: 68
+  p361: 65
+  p362: 20
+  p363: 60
+  p364: 9
+  p374: 100
+  p376: 69
+  s5: 11
 train:
   amp_dtype: fp32
   batch_size: 48

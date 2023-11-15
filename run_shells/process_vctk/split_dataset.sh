@@ -9,10 +9,9 @@ cd "$curdir" || exit
 cd ../../
 
 
-base_dir="/mnt/cephfs/hjh/train_record/vc/so-vits-svc/vctk/test_data"
-out_dir="${base_dir}/resample_to_44100"
-train_file="${base_dir}/train.txt"
-val_file="${base_dir}/val.txt"
+out_dir=$1
+train_file=$2
+val_file=$3
 
 python preprocess_flist_config.py \
   --train_list ${train_file} \
