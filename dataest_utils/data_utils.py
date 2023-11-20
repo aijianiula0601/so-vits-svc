@@ -8,9 +8,7 @@ import torch.utils.data
 import utils
 from modules.mel_processing import spectrogram_torch
 from utils import load_filepaths_and_text, load_wav_to_torch
-
-# import h5py
-
+from dataest_utils import process_utils
 
 """Multi speaker version"""
 
@@ -55,26 +53,22 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         audio_norm = audio_norm.unsqueeze(0)
         spec_filename = filename.replace(".wav", ".spec.pt")
 
-        # Ideally, all data generated after Mar 25 should have .spec.pt
-        if os.path.exists(spec_filename):
-            spec = torch.load(spec_filename)
-        else:
-            spec = spectrogram_torch(audio_norm, self.filter_length,
-                                     self.sampling_rate, self.hop_length, self.win_length,
-                                     center=False)
-            spec = torch.squeeze(spec, 0)
-            torch.save(spec, spec_filename)
+        spec = spectrogram_torch(audio_norm, self.filter_length,
+                                 self.sampling_rate, self.hop_length, self.win_length,
+                                 center=False)
+        spec = torch.squeeze(spec, 0)
+        torch.save(spec, spec_filename)
 
         spk = filename.split("/")[-2]
         spk = torch.LongTensor([self.spk_map[spk]])
 
-        f0, uv = np.load(filename + ".f0.npy",allow_pickle=True)
+        f0, uv = np.load(filename + ".f0.npy", allow_pickle=True)
 
-        f0 = torch.FloatTensor(np.array(f0,dtype=float))
-        uv = torch.FloatTensor(np.array(uv,dtype=float))
+        f0 = torch.FloatTensor(np.array(f0, dtype=float))
+        uv = torch.FloatTensor(np.array(uv, dtype=float))
 
-        assert os.path.exists(filename+ ".soft.pt"),filename+ ".soft.pt"+"  is not exist!!!"
-        c = torch.load(filename+ ".soft.pt")
+        assert os.path.exists(filename + ".soft.pt"), filename + ".soft.pt" + "  is not exist!!!"
+        c = torch.load(filename + ".soft.pt")
         c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[0], mode=self.unit_interpolate_mode)
         if self.vol_emb:
             volume_path = filename + ".vol.npy"
@@ -85,7 +79,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
 
         lmin = min(c.size(-1), spec.size(-1))
         assert abs(c.size(-1) - spec.size(-1)) < 3, (c.size(-1), spec.size(-1), f0.shape, filename)
-        assert abs(audio_norm.shape[1]-lmin * self.hop_length) < 3 * self.hop_length
+        assert abs(audio_norm.shape[1] - lmin * self.hop_length) < 3 * self.hop_length
         spec, c, f0, uv = spec[:, :lmin], c[:, :lmin], f0[:lmin], uv[:lmin]
         audio_norm = audio_norm[:, :lmin * self.hop_length]
         if volume is not None:
@@ -99,25 +93,25 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
 
         if random.choice([True, False]) and self.vol_aug and volume is not None:
             max_amp = float(torch.max(torch.abs(audio_norm))) + 1e-5
-            max_shift = min(1, np.log10(1/max_amp))
+            max_shift = min(1, np.log10(1 / max_amp))
             log10_vol_shift = random.uniform(-1, max_shift)
             audio_norm = audio_norm * (10 ** log10_vol_shift)
             volume = volume * (10 ** log10_vol_shift)
             spec = spectrogram_torch(audio_norm,
-            self.hparams.data.filter_length,
-            self.hparams.data.sampling_rate,
-            self.hparams.data.hop_length,
-            self.hparams.data.win_length,
-            center=False)[0]
+                                     self.hparams.data.filter_length,
+                                     self.hparams.data.sampling_rate,
+                                     self.hparams.data.hop_length,
+                                     self.hparams.data.win_length,
+                                     center=False)[0]
 
         if spec.shape[1] > 800:
-            start = random.randint(0, spec.shape[1]-800)
+            start = random.randint(0, spec.shape[1] - 800)
             end = start + 790
             spec, c, f0, uv = spec[:, start:end], c[:, start:end], f0[start:end], uv[start:end]
-            audio_norm = audio_norm[:, start * self.hop_length : end * self.hop_length]
+            audio_norm = audio_norm[:, start * self.hop_length: end * self.hop_length]
             if volume is not None:
                 volume = volume[start:end]
-        return c, f0, spec, audio_norm, spk, uv,volume
+        return c, f0, spec, audio_norm, spk, uv, volume
 
     def __getitem__(self, index):
         if self.all_in_mem:
@@ -181,6 +175,6 @@ class TextAudioCollate:
             volume = row[6]
             if volume is not None:
                 volume_padded[i, :volume.size(0)] = volume
-            else :
+            else:
                 volume_padded = None
         return c_padded, f0_padded, spec_padded, wav_padded, spkids, lengths, uv_padded, volume_padded
