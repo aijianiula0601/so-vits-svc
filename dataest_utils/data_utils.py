@@ -7,10 +7,18 @@ import torch.utils.data
 
 import utils
 from modules.mel_processing import spectrogram_torch
-from utils import load_filepaths_and_text, load_wav_to_torch
+from utils import load_wav_to_torch
 from dataest_utils import process_utils
 
 """Multi speaker version"""
+
+
+def load_filepaths_and_text(filename, split="|"):
+    with open(filename, encoding='utf-8') as f:
+        # wav_file|soft_file|spk_name
+        filepaths_and_text = [line.strip().split(split) for line in f]
+        random.shuffle(filepaths_and_text)
+    return filepaths_and_text
 
 
 class TextAudioSpeakerLoader(torch.utils.data.Dataset):
@@ -20,7 +28,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         3) computes spectrograms from audio files.
     """
 
-    def __init__(self, audiopaths, hparams, all_in_mem: bool = False, vol_aug: bool = True):
+    def __init__(self, audiopaths, speaker_name_file, hparams, vol_aug: bool = True):
         self.audiopaths = load_filepaths_and_text(audiopaths)
         self.hparams = hparams
         self.max_wav_value = hparams.data.max_wav_value
@@ -32,18 +40,13 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         self.sampling_rate = hparams.data.sampling_rate
         self.use_sr = hparams.train.use_sr
         self.spec_len = hparams.train.max_speclen
-        self.spk_map = hparams.spk
+        self.spk_map = dict([(sn.replace("\n", ""), i) for i, sn in enumerate(open(speaker_name_file).readlines())])
         self.vol_emb = hparams.model.vol_embedding
         self.vol_aug = hparams.train.vol_aug and vol_aug
         random.seed(1234)
         random.shuffle(self.audiopaths)
 
-        self.all_in_mem = all_in_mem
-        if self.all_in_mem:
-            self.cache = [self.get_audio(p[0]) for p in self.audiopaths]
-
-    def get_audio(self, filename):
-        filename = filename.replace("\\", "/")
+    def get_audio(self, filename, c_file, spk):
         audio, sampling_rate = load_wav_to_torch(filename)
         if sampling_rate != self.sampling_rate:
             raise ValueError(
@@ -59,22 +62,18 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         spec = torch.squeeze(spec, 0)
         torch.save(spec, spec_filename)
 
-        spk = filename.split("/")[-2]
         spk = torch.LongTensor([self.spk_map[spk]])
 
-        f0, uv = np.load(filename + ".f0.npy", allow_pickle=True)
+        f0, uv, volume = process_utils.process_one(filename, hps=self.hparams, f0p='rmvpe',
+                                                   sampling_rate=self.sampling_rate)
 
         f0 = torch.FloatTensor(np.array(f0, dtype=float))
         uv = torch.FloatTensor(np.array(uv, dtype=float))
 
-        assert os.path.exists(filename + ".soft.pt"), filename + ".soft.pt" + "  is not exist!!!"
-        c = torch.load(filename + ".soft.pt")
+        assert os.path.exists(c_file), c_file + "  is not exist!!!"
+        c = torch.load(c_file)
         c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[0], mode=self.unit_interpolate_mode)
-        if self.vol_emb:
-            volume_path = filename + ".vol.npy"
-            volume = np.load(volume_path)
-            volume = torch.from_numpy(volume).float()
-        else:
+        if not self.vol_emb:
             volume = None
 
         lmin = min(c.size(-1), spec.size(-1))
@@ -114,10 +113,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         return c, f0, spec, audio_norm, spk, uv, volume
 
     def __getitem__(self, index):
-        if self.all_in_mem:
-            return self.random_slice(*self.cache[index])
-        else:
-            return self.random_slice(*self.get_audio(self.audiopaths[index][0]))
+        file, c_file, spk = self.audiopaths[index]
+        return self.random_slice(*self.get_audio(file, c_file, spk))
 
     def __len__(self):
         return len(self.audiopaths)

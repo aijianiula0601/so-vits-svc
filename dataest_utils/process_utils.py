@@ -49,7 +49,7 @@ def load_audio_wav(wav_path, target_sample_rate=44100, skip_loudnorm=False):
         wav = normalize_peak(wav)
 
         if target_sample_rate == sr:
-            return wav
+            return wav, sr
 
         wav = resample_wav(wav, sr, target_sample_rate)
         if not skip_loudnorm:
@@ -58,28 +58,27 @@ def load_audio_wav(wav_path, target_sample_rate=44100, skip_loudnorm=False):
         return wav, target_sample_rate
 
 
-def process_one(wav, sampling_rate, hmodel, f0p, device, hps):
+def process_one(file_path, sampling_rate, hps, f0p='rmvpe'):
     """
     提取mel，f0,uv,bert,vol
     """
+    wav, sr = load_audio_wav(file_path, target_sample_rate=hps.data.sampling_rate)
+
     audio_norm = torch.FloatTensor(wav)
     audio_norm = audio_norm.unsqueeze(0)
-    wav16k = librosa.resample(wav, orig_sr=sampling_rate, target_sr=16000)
-    wav16k = torch.from_numpy(wav16k).to(device)
-    c = hmodel.encoder(wav16k)
 
     f0_predictor = utils.get_f0_predictor(f0p, sampling_rate=sampling_rate, hop_length=hps.hop_length, device=None,
                                           threshold=0.05)
     f0, uv = f0_predictor.compute_f0_uv(wav)
 
-    if sampling_rate != hps.data.sampling_rate:
+    if sr != hps.data.sampling_rate:
         raise ValueError(
             "{} SR doesn't match target {} SR".format(
-                sampling_rate, hps.data.sampling_rate
+                sr, hps.data.sampling_rate
             )
         )
 
     assert hps.model.vol_embedding, "vol_embedding must be True, now is hps.model.vol_embedding "
     volume_extractor = utils.Volume_Extractor(hps.hop_length)
-    volume = volume_extractor.extract(audio_norm)
-    return c, f0, uv, volume
+    volume = volume_extractor.extract(audio_norm).float()
+    return f0, uv, volume
