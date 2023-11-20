@@ -39,7 +39,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         self.vol_aug = hparams.train.vol_aug and vol_aug
         random.seed(1234)
         random.shuffle(self.audiopaths)
-        
+
         self.all_in_mem = all_in_mem
         if self.all_in_mem:
             self.cache = [self.get_audio(p[0]) for p in self.audiopaths]
@@ -69,10 +69,11 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         spk = torch.LongTensor([self.spk_map[spk]])
 
         f0, uv = np.load(filename + ".f0.npy",allow_pickle=True)
-        
+
         f0 = torch.FloatTensor(np.array(f0,dtype=float))
         uv = torch.FloatTensor(np.array(uv,dtype=float))
 
+        assert os.path.exists(filename+ ".soft.pt"),filename+ ".soft.pt"+"  is not exist!!!"
         c = torch.load(filename+ ".soft.pt")
         c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[0], mode=self.unit_interpolate_mode)
         if self.vol_emb:

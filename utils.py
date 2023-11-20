@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import traceback
+import random
 from multiprocessing import cpu_count
 
 import faiss
@@ -306,6 +307,7 @@ def load_wav_to_torch(full_path):
 def load_filepaths_and_text(filename, split="|"):
   with open(filename, encoding='utf-8') as f:
     filepaths_and_text = [line.strip().split(split) for line in f]
+    random.shuffle(filepaths_and_text)
   return filepaths_and_text
 
 
