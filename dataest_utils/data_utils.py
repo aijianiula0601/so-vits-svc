@@ -18,6 +18,7 @@ def load_filepaths_and_text(filename, split="|"):
         # wav_file|soft_file|spk_name
         filepaths_and_text = [line.strip().split(split) for line in f]
         random.shuffle(filepaths_and_text)
+    print(f"--load file done, lines:{len(filepaths_and_text)}, file: {filename}")
     return filepaths_and_text
 
 
@@ -47,7 +48,11 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         random.shuffle(self.audiopaths)
 
     def get_audio(self, filename, c_file, spk):
-        audio, sampling_rate = load_wav_to_torch(filename)
+        audio_data, sampling_rate = process_utils.resample_audio(filename, target_sample_rate=self.sampling_rate)
+        audio_data = (audio_data * np.iinfo(np.int16).max).astype(np.int16)
+        audio = torch.FloatTensor(audio_data.astype(np.float32))
+
+        # audio, sampling_rate = load_wav_to_torch(filename)
         if sampling_rate != self.sampling_rate:
             raise ValueError(
                 "Sample Rate not match. Expect {} but got {} from {}".format(

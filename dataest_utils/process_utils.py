@@ -38,7 +38,7 @@ def save_wav_to_path(wav, save_path, sr):
     )
 
 
-def load_audio_wav(wav_path, target_sample_rate=44100, skip_loudnorm=False):
+def resample_audio(wav_path, target_sample_rate=44100, skip_loudnorm=False):
     """
     加载音频，必要时候重采样
     """
@@ -49,25 +49,25 @@ def load_audio_wav(wav_path, target_sample_rate=44100, skip_loudnorm=False):
         wav = normalize_peak(wav)
 
         if target_sample_rate == sr:
-            return wav, sr
+            return (wav * np.iinfo(np.int16).max).astype(np.int16), sr
 
         wav = resample_wav(wav, sr, target_sample_rate)
         if not skip_loudnorm:
             wav /= np.max(np.abs(wav))
 
-        return wav, target_sample_rate
+        return (wav * np.iinfo(np.int16).max).astype(np.int16), target_sample_rate
 
 
 def process_one(file_path, sampling_rate, hps, f0p='rmvpe'):
     """
     提取mel，f0,uv,bert,vol
     """
-    wav, sr = load_audio_wav(file_path, target_sample_rate=hps.data.sampling_rate)
+    wav, sr = librosa.load(file_path, sr=sampling_rate)
 
     audio_norm = torch.FloatTensor(wav)
     audio_norm = audio_norm.unsqueeze(0)
 
-    f0_predictor = utils.get_f0_predictor(f0p, sampling_rate=sampling_rate, hop_length=hps.hop_length, device=None,
+    f0_predictor = utils.get_f0_predictor(f0p, sampling_rate=sampling_rate, hop_length=hps.data.hop_length, device=None,
                                           threshold=0.05)
     f0, uv = f0_predictor.compute_f0_uv(wav)
 
